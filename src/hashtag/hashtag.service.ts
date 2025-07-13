@@ -53,4 +53,13 @@ export class HashtagService {
       deletedHashtag,
     };
   }
+
+  public async softDeleteHashtag(id: number) {
+    const deletedHashtag = await this.hashtagRepository.softDelete(id);
+    return {
+      status: 'success',
+      message: 'Hashtag deleted',
+      deletedHashtag,
+    };
+  }
 }

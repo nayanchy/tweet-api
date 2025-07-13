@@ -6,26 +6,32 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { TweetService } from './tweet.service';
 import { CreateTweetDto } from './dto/create-tweet.dto';
 import { Tweet } from './tweet.entity';
+import { PaginationDto } from 'src/common/pagination/dto/pagination-query.dto';
+import { QueryDto } from 'src/common/pagination/dto/query.dto';
 
 @Controller('tweet')
 export class TweetController {
   constructor(private readonly tweetService: TweetService) {}
-  @Get()
-  getAllTweets(): Promise<Tweet[]> {
-    return this.tweetService.getTweets();
-  }
   // @Get()
-  // getTweets(@Query('userId', ParseIntPipe) userId?: number): Promise<Tweet[]> {
-  //   return this.tweetService.getTweets(userId);
+  // getAllTweets(): Promise<Tweet[]> {
+  //   return this.tweetService.getTweets();
   // }
+  @Get()
+  getAllTweets(@Query() queryDto?: QueryDto): Promise<Tweet[]> {
+    return this.tweetService.getTweets(queryDto?.userId, queryDto);
+  }
 
   @Get(':userId')
-  getTweets(@Param('userId', ParseIntPipe) userId?: number): Promise<Tweet[]> {
-    return this.tweetService.getTweets(userId);
+  getTweetsByUserId(
+    @Param('userId', ParseIntPipe) userId?: number,
+    @Query() paginationDto?: PaginationDto,
+  ): Promise<Tweet[]> {
+    return this.tweetService.getTweets(userId, paginationDto);
   }
 
   @Post()

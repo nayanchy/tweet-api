@@ -1,44 +1,25 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
 import { UserService } from 'src/users/users.service';
+import authConfig from './config/auth.config';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+
+    @Inject(authConfig.KEY)
+    private readonly authConfiguration: ConfigType<typeof authConfig>,
   ) {}
 
   isAuthenticated: boolean = false;
-  login(email: string, password: string) {
-    const userOrError = this.userService.getUserByEmail(email);
-    if (typeof userOrError === 'string') {
-      return {
-        authenticated: false,
-        session: null,
-        message: 'User not found',
-      };
-    } else {
-      const isPasswordValid = userOrError.password === password;
+  async login(email: string, password: string) {
+    const userOrError = await this.userService.getUserByEmail(email);
+    console.log(password, userOrError);
 
-      if (isPasswordValid) {
-        this.isAuthenticated = true;
-      }
+    console.log('Auth Config:', this.authConfiguration);
 
-      if (!isPasswordValid) {
-        return {
-          authenticated: false,
-          session: null,
-          message: 'Password does not match',
-        };
-      }
-      return {
-        authenticated: true,
-        session: {
-          userId: userOrError.id,
-          email: userOrError.email,
-          firstName: userOrError.firstName,
-        },
-      };
-    }
+    return userOrError;
   }
 }

@@ -1,27 +1,64 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { UserType, UserResponse } from './interfaces/users.interface';
-import { Repository } from 'typeorm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  RequestTimeoutException,
+} from '@nestjs/common';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
-import { Profile } from 'src/profile/profile.entity';
+import { PaginationProvider } from 'src/common/pagination/pagination.provider';
+import { PaginationDto } from 'src/common/pagination/dto/pagination-query.dto';
 
 @Injectable()
 export class UserService {
   constructor(
+    private readonly paginationProvider: PaginationProvider,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>,
   ) {}
-  public async getUsers(query?: any): Promise<User[]> {
-    console.log('Query:', query);
-    return await this.userRepository.find({
-      relations: {
-        profile: true,
-      },
-    });
+  public async getUsers(
+    query?: { gender?: string } & PaginationDto,
+  ): Promise<CreateUserDto[]> {
+    const allowedQueryParams = ['gender', 'page', 'limit'];
+
+    try {
+      if (query) {
+        const invalidParams = Object.keys(query).filter(
+          (key) => !allowedQueryParams.includes(key),
+        );
+
+        if (invalidParams.length > 0) {
+          throw new BadRequestException(
+            `Invalid query parameters: ${invalidParams.join(', ')}`,
+          );
+        }
+      }
+      const where: FindOptionsWhere<User> = {};
+      // const qb = this.userRepository
+      //   .createQueryBuilder('user')
+      //   .leftJoinAndSelect('user.profile', 'profile');
+
+      if (query?.gender) {
+        // qb.andWhere('profile.gender = :gender', { gender: query.gender });
+        where.profile = { gender: query.gender };
+      }
+
+      // return await qb.getMany();
+
+      const users = await this.paginationProvider.paginateQuery(
+        query as PaginationDto,
+        this.userRepository,
+        where,
+      );
+      return users;
+    } catch (error) {
+      console.log(error);
+      throw new RequestTimeoutException(
+        'An error occurred while processing your request. Please try again later.',
+      );
+    }
   }
 
   async getUserById(id: number): Promise<CreateUserDto> {
@@ -32,51 +69,98 @@ export class UserService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new NotFoundException('User not found');
     }
 
     return user;
   }
 
-  getUserByEmail(email: string): UserType | string {
-    console.log(email);
-    return `User with email: ${email}`;
+  async getUserByEmail(email: string) {
+    const user = await this.userRepository.findOneBy({ email });
+    return user;
+  }
+
+  async getUserByUsername(username: string) {
+    const user = await this.userRepository.findOneBy({ username });
+
+    return user;
   }
 
   public async createUser(userDto: CreateUserDto) {
-    const user = await this.userRepository.findOne({
-      where: {
-        email: userDto.email,
-      },
-    });
+    try {
+      const userByEmail = await this.getUserByEmail(userDto.email);
+      const userByUsername = await this.getUserByUsername(userDto.username);
 
-    if (user) {
-      return 'User already exists';
+      if (userByEmail) {
+        throw new BadRequestException('User with this email already exists');
+      }
+
+      if (userByUsername) {
+        throw new BadRequestException('User with this username already exists');
+      }
+      userDto.profile = userDto.profile ?? {};
+      const newUser = this.userRepository.create(userDto);
+      const response = await this.userRepository.save(newUser);
+
+      return response;
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: string })?.code === 'ECONNREFUSED'
+      ) {
+        throw new RequestTimeoutException(
+          'An error has ocurred, please try again.',
+          {
+            description: 'Database connection refused',
+          },
+        );
+      }
+
+      throw error;
     }
-    userDto.profile = userDto.profile ?? {};
-    const newUser = this.userRepository.create(userDto);
-    const response = await this.userRepository.save(newUser);
-
-    return response;
   }
 
-  updateUser(id: number, data: Partial<User>): UserResponse {
-    console.log(id, data);
-    return { status: 'success', message: 'User updated' };
+  async updateUser(id: number, data: Partial<CreateUserDto>) {
+    try {
+      const user = await this.userRepository.findOneBy({ id });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const updatedUser = await this.userRepository.save({
+        ...user,
+        ...data,
+      });
+
+      return {
+        status: 'success',
+        message: 'User updated',
+        updatedUser,
+      };
+    } catch (error) {
+      console.error('Error finding user:', error);
+      throw new BadRequestException('Failed to find user');
+    }
   }
 
   public async deleteUser(id: number) {
     const user = await this.userRepository.findOneBy({ id });
-    if (!user) {
-      throw new BadRequestException('User not found');
+    try {
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const deletedUser = await this.userRepository.delete(id);
+
+      return {
+        status: 'success',
+        message: 'User deleted',
+        deletedUser,
+      };
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw new BadRequestException('Failed to delete user');
     }
-
-    const deletedUser = await this.userRepository.delete(id);
-
-    return {
-      status: 'success',
-      message: 'User deleted',
-      deletedUser,
-    };
   }
 }

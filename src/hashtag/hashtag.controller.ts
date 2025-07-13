@@ -30,7 +30,7 @@ export class HashtagController {
   }
 
   @Delete(':id')
-  deleteHashtag(@Param('id', ParseIntPipe) id: number) {
-    return this.hashtagService.deleteHashtag(id);
+  softDeleteHashtag(@Param('id', ParseIntPipe) id: number) {
+    return this.hashtagService.softDeleteHashtag(id);
   }
 }
