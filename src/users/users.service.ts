@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
   RequestTimeoutException,
@@ -10,17 +12,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
 import { PaginationDto } from 'src/common/pagination/dto/pagination-query.dto';
+import { Paginated } from 'src/common/pagination/pagination.interface';
+import { HashingProvider } from 'src/auth/provider/hashing.provider';
 
 @Injectable()
 export class UserService {
   constructor(
-    private readonly paginationProvider: PaginationProvider,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private readonly paginationProvider: PaginationProvider,
+
+    @Inject(forwardRef(() => HashingProvider))
+    private readonly hashingProvider: HashingProvider,
   ) {}
   public async getUsers(
     query?: { gender?: string } & PaginationDto,
-  ): Promise<CreateUserDto[]> {
+  ): Promise<Paginated<CreateUserDto>> {
     const allowedQueryParams = ['gender', 'page', 'limit'];
 
     try {
@@ -35,7 +42,7 @@ export class UserService {
           );
         }
       }
-      const where: FindOptionsWhere<User> = {};
+      const where: FindOptionsWhere<CreateUserDto> = {};
       // const qb = this.userRepository
       //   .createQueryBuilder('user')
       //   .leftJoinAndSelect('user.profile', 'profile');
@@ -47,11 +54,12 @@ export class UserService {
 
       // return await qb.getMany();
 
-      const users = await this.paginationProvider.paginateQuery(
-        query as PaginationDto,
-        this.userRepository,
-        where,
-      );
+      const users: Paginated<CreateUserDto> =
+        await this.paginationProvider.paginateQuery(
+          query as PaginationDto,
+          this.userRepository,
+          where,
+        );
       return users;
     } catch (error) {
       console.log(error);
@@ -99,7 +107,10 @@ export class UserService {
         throw new BadRequestException('User with this username already exists');
       }
       userDto.profile = userDto.profile ?? {};
-      const newUser = this.userRepository.create(userDto);
+      const newUser = this.userRepository.create({
+        ...userDto,
+        password: await this.hashingProvider.hashPassword(userDto.password),
+      });
       const response = await this.userRepository.save(newUser);
 
       return response;

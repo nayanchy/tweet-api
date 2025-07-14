@@ -11,6 +11,7 @@ import { CreateTweetDto } from './dto/create-tweet.dto';
 import { HashtagService } from 'src/hashtag/hashtag.service';
 import { PaginationDto } from 'src/common/pagination/dto/pagination-query.dto';
 import { PaginationProvider } from 'src/common/pagination/pagination.provider';
+import { Paginated } from 'src/common/pagination/pagination.interface';
 
 @Injectable()
 export class TweetService {
@@ -23,7 +24,10 @@ export class TweetService {
     private readonly tweetRepository: Repository<Tweet>,
   ) {}
 
-  public async getTweets(userId?: number, paginationDto?: PaginationDto) {
+  public async getTweets(
+    userId?: number,
+    paginationDto?: PaginationDto,
+  ): Promise<Paginated<Tweet>> {
     try {
       const user = await this.userService.getUserById(userId as number);
       if (!user) {

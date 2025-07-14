@@ -13,6 +13,7 @@ import { CreateTweetDto } from './dto/create-tweet.dto';
 import { Tweet } from './tweet.entity';
 import { PaginationDto } from 'src/common/pagination/dto/pagination-query.dto';
 import { QueryDto } from 'src/common/pagination/dto/query.dto';
+import { Paginated } from 'src/common/pagination/pagination.interface';
 
 @Controller('tweet')
 export class TweetController {
@@ -22,7 +23,7 @@ export class TweetController {
   //   return this.tweetService.getTweets();
   // }
   @Get()
-  getAllTweets(@Query() queryDto?: QueryDto): Promise<Tweet[]> {
+  getAllTweets(@Query() queryDto?: QueryDto): Promise<Paginated<Tweet>> {
     return this.tweetService.getTweets(queryDto?.userId, queryDto);
   }
 
@@ -30,7 +31,7 @@ export class TweetController {
   getTweetsByUserId(
     @Param('userId', ParseIntPipe) userId?: number,
     @Query() paginationDto?: PaginationDto,
-  ): Promise<Tweet[]> {
+  ): Promise<Paginated<Tweet>> {
     return this.tweetService.getTweets(userId, paginationDto);
   }
 

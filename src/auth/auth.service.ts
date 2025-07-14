@@ -1,7 +1,14 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { UserService } from 'src/users/users.service';
 import authConfig from './config/auth.config';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,12 +21,22 @@ export class AuthService {
   ) {}
 
   isAuthenticated: boolean = false;
-  async login(email: string, password: string) {
-    const userOrError = await this.userService.getUserByEmail(email);
-    console.log(password, userOrError);
+  public async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+    try {
+      const user = await this.userService.getUserByEmail(email);
+      if (!user) {
+        throw new UnauthorizedException(`User with email ${email} not found`);
+      }
+      console.log(password);
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
 
-    console.log('Auth Config:', this.authConfiguration);
-
+  async signup(userDto: CreateUserDto) {
+    const userOrError = await this.userService.createUser(userDto);
     return userOrError;
   }
 }
