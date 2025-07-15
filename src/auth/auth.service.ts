@@ -9,6 +9,8 @@ import { UserService } from 'src/users/users.service';
 import authConfig from './config/auth.config';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
+import { HashingProvider } from './provider/hashing.provider';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +20,9 @@ export class AuthService {
 
     @Inject(authConfig.KEY)
     private readonly authConfiguration: ConfigType<typeof authConfig>,
+
+    private readonly hashingProvider: HashingProvider,
+    private readonly jwtService: JwtService,
   ) {}
 
   isAuthenticated: boolean = false;
@@ -28,7 +33,33 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException(`User with email ${email} not found`);
       }
-      console.log(password);
+
+      const isPasswordValid =
+        (await this.hashingProvider.comparePassword(password, user.password)) ||
+        false;
+
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid password');
+      }
+
+      const token = await this.jwtService.signAsync(
+        {
+          sub: user.id,
+          email: user.email,
+        },
+        {
+          secret: this.authConfiguration.secret,
+          expiresIn: this.authConfiguration.expiresIn,
+          audience: this.authConfiguration.audience,
+          issuer: this.authConfiguration.issuer,
+        },
+      );
+
+      return {
+        token,
+        success: true,
+        message: 'Login successful',
+      };
     } catch (error) {
       console.log(error);
       throw error;
