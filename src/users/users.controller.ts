@@ -7,13 +7,10 @@ import {
   ParseIntPipe,
   Patch,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './users.service';
-import { AuthorizeGuard } from 'src/auth/guards/authorize.guards';
 
 @Controller('users')
-@UseGuards(AuthorizeGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

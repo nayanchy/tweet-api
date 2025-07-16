@@ -32,8 +32,6 @@ export class AuthorizeGuard implements CanActivate {
         email: string;
       }>(token, this.authConfiguration);
       request.user = payload;
-
-      console.log(request); // Debugging line to check payload
     } catch (error) {
       console.log(error);
       throw new UnauthorizedException('Invalid token');
