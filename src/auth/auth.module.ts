@@ -18,8 +18,8 @@ import { JwtModule } from '@nestjs/jwt';
     },
   ],
   imports: [
-    ConfigModule.forFeature(authConfig),
     forwardRef(() => UserModule),
+    ConfigModule.forFeature(authConfig),
     JwtModule.registerAsync(authConfig.asProvider()),
   ],
   exports: [AuthService, HashingProvider],
