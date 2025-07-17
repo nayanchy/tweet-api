@@ -11,6 +11,7 @@ import authConfig from '../config/auth.config';
 import { ConfigType } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { REQUEST_USER_KEY } from 'src/contants/constants';
+import { ActiveUserData } from '../decorators/active-user.interface';
 
 @Injectable()
 export class AuthorizeGuard implements CanActivate {
@@ -41,10 +42,10 @@ export class AuthorizeGuard implements CanActivate {
       throw new UnauthorizedException('Authorization token is missing');
     }
     try {
-      const payload = await this.jwtService.verifyAsync<{
-        sub: string;
-        email: string;
-      }>(token, this.authConfiguration);
+      const payload = await this.jwtService.verifyAsync<ActiveUserData>(
+        token,
+        this.authConfiguration,
+      );
       request[REQUEST_USER_KEY] = payload;
     } catch (error) {
       console.log(error);

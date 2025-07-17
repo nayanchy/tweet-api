@@ -14,6 +14,7 @@ import { Tweet } from './tweet.entity';
 import { PaginationDto } from 'src/common/pagination/dto/pagination-query.dto';
 import { QueryDto } from 'src/common/pagination/dto/query.dto';
 import { Paginated } from 'src/common/pagination/pagination.interface';
+import { ActiveUser } from 'src/auth/decorators/active-user.decorator';
 
 @Controller('tweet')
 export class TweetController {
@@ -36,8 +37,11 @@ export class TweetController {
   }
 
   @Post()
-  public async createTweet(@Body() tweet: CreateTweetDto) {
-    const res = await this.tweetService.createTweet(tweet);
+  public async createTweet(
+    @Body() tweet: CreateTweetDto,
+    @ActiveUser('sub') user,
+  ) {
+    const res = await this.tweetService.createTweet(tweet, user);
 
     return res;
   }
