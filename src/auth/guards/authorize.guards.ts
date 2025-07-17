@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import authConfig from '../config/auth.config';
 import { ConfigType } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
+import { REQUEST_USER_KEY } from 'src/contants/constants';
 
 @Injectable()
 export class AuthorizeGuard implements CanActivate {
@@ -44,7 +45,7 @@ export class AuthorizeGuard implements CanActivate {
         sub: string;
         email: string;
       }>(token, this.authConfiguration);
-      request.user = payload;
+      request[REQUEST_USER_KEY] = payload;
     } catch (error) {
       console.log(error);
       throw new UnauthorizedException('Invalid token');
