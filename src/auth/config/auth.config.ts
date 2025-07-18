@@ -5,4 +5,8 @@ export default registerAs('auth', () => ({
   expiresIn: parseInt(process.env?.JWT_TOKEN_EXPIRATION ?? '3600', 10),
   audience: process.env.JWT_TOKEN_AUDIENCE,
   issuer: process.env.JWT_TOKEN_ISSUER,
+  refreshTokenExpiration: parseInt(
+    process.env?.REFRESH_TOKEN_EXPIRATION ?? '86400',
+    10,
+  ),
 }));
